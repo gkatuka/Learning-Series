@@ -1,13 +1,11 @@
+import requests
 from mcp.server.fastmcp import FastMCP
 
 
 # Create an MCP server
 mcp = FastMCP(
-    name="Greeting",
-    host="0.0.0.0",  # only used for SSE transport (localhost)
-    port=8050,  # only used for SSE transport (set this to any port)
+    name="My MCP Server"
 )
-
 
 # Add a simple calculator tool
 @mcp.tool()
@@ -22,6 +20,7 @@ async def greeting(name: str) -> str:
     str: A greeting message.
     """
     return f"Hello, {name}! This is a simple MCP server response."
+
 
 # Run the server
 if __name__ == "__main__":

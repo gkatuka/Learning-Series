@@ -5,12 +5,11 @@ from mcp.client.stdio import stdio_client
 
 nest_asyncio.apply()  # Needed to run interactive python
 
-
 async def main():
     # Define server parameters
     server_params = StdioServerParameters(
         command="python",  
-        args=["greeting_server.py"], 
+        args=["mcp_server.py"], 
     )
 
     # Connect to the server
@@ -25,8 +24,8 @@ async def main():
             for tool in tools_result.tools:
                 print(f"  - {tool.name}: {tool.description}")
 
-            # Call our calculator tool
-            result = await session.call_tool("greeting", arguments={"name": "John Doe"})
+            # Call our greeting tool
+            result = await session.call_tool("greeting", arguments={"name": "Jan Doe"})
             print(f" {result.content[0].text}")
 
 
