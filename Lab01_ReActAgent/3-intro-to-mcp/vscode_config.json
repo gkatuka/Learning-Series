@@ -1,9 +1,0 @@
-{
-    "weather": {
-            "command": "python",
-            "args": [
-                "C:\\Users\\katukagloria\\Learning-Series\\Lab01_ReActAgent\\3-intro-to-mcp\\weather_server.py",
-                "weather.py"
-            ]
-        }
-}
