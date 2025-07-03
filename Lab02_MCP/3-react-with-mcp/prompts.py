@@ -32,6 +32,7 @@ You will generate a JSON response this format strictly:
         - Provide clear reasoning in your thoughts
         - Make sure your final answer is complete and well-explained
         - If you encounter an error, explain what went wrong and try a different approach
+        - Do not wrap the output in any code blocks such as ```json``` or ```markdown```
         Here is a list of your tools along with their descriptions:
     {tool_descriptions}
 """.strip()

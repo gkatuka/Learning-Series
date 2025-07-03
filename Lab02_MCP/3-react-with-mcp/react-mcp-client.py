@@ -7,6 +7,7 @@ from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from prompts import react_prompt_template
 from contextlib import AsyncExitStack
 from mcp import ClientSession, StdioServerParameters
+# from mcp_use import MCPAgent, MCPClient
 from mcp.client.stdio import stdio_client
 
 from dotenv import load_dotenv
@@ -26,6 +27,7 @@ class ReActAgent:
         self._exit_stack: AsyncExitStack | None = None
         self.session: ClientSession | None = None
         self.tools_description: str = ""  
+        self.available_tools: Dict[str, Any] = {}
 
     # formats the thought process history as a string for prompt context
     def _format_thought_history(self, thought_process: List[Dict[str, Any]]) -> str:
@@ -62,9 +64,44 @@ class ReActAgent:
 
         # Build description string for prompt
         tools = await self.session.list_tools()
-        self.tools_description = "\n".join(
-            f"{t.name}: \"{t.description}\"" for t in tools.tools
-        )
+        tool_descriptions = []
+        for tool in tools.tools:
+            self.available_tools[tool.name] = tool
+            tool_descriptions.append(f"{tool.name}: \"{tool.description}\"")
+        self.tools_description = "\n".join(tool_descriptions)
+        # tools = await self.session.list_tools()
+        # self.tools_description = "\n".join(
+        #     f"{t.name}: \"{t.description}\"" for t in tools.tools
+        # )
+    async def _execute_mcp_tool(self, tool_name: str, tool_input: Dict[str, Any]) -> str:
+        """Execute a tool through the MCP session."""
+        if not self.session:
+            return "Error: MCP session not initialized"
+        
+        if tool_name not in self.available_tools:
+            return f"Unknown tool '{tool_name}'"
+        
+        try:
+            result = await self.session.call_tool(tool_name, tool_input)
+            
+            # Extract content from MCP response
+            if hasattr(result, 'content') and result.content:
+                if isinstance(result.content, list):
+                    content_parts = []
+                    for item in result.content:
+                        if hasattr(item, 'text'):
+                            content_parts.append(item.text)
+                        else:
+                            content_parts.append(str(item))
+                    return "\n".join(content_parts)
+                else:
+                    return str(result.content)
+            else:
+                return str(result)
+                
+        except Exception as ex:
+            return f"Tool runtime error: {ex}"
+        
     # send a request to OpenAI and get the response
     async def _get_openai_response(self, prompt: str, query: str) -> str:
 
@@ -93,6 +130,8 @@ class ReActAgent:
         
     # executes the ReAct loop      
     async def run(self, query: str) -> str:
+        await self._connect()
+
         thought_process: List[Dict[str, Any]] = []
 
         while True:
@@ -101,7 +140,7 @@ class ReActAgent:
                 self.react_prompt.format(tool_descriptions=self.tools_description)
             )
             if thought_process:
-                prompt += self.format_thought_history(thought_process)
+                prompt += self._format_thought_history(thought_process)
 
             # Get next step from LLM (assumes JSON-formatted output)
             step_text = await self._get_openai_response(prompt, query)
@@ -141,7 +180,8 @@ class ReActAgent:
                     )
                     continue
 
-                tool_func = getattr(self.tools, tool_name, None)
+                # tool_func = getattr(self.tools, tool_name, None)
+                tool_func = await self._execute_mcp_tool(tool_name, tool_input)
                 if callable(tool_func):
                     try:
                         result = tool_func(tool_input)
